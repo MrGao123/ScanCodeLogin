@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<div id="qrCode"></div>
+</body>
+<script src="./src/js/jquery.min.js"></script>
+<script src="./jquery.qrcode.js"></script>
+<script src="./jqCode.js"></script>
+<script>
+    /*
+    * 整个核心过程是：
+    *   浏览器获得一个临时 id，通过长连接等待客户端扫描带有此 id 的二维码后，
+    *   从长连接中获得客户端上报给 server 的帐号信息进行展示，
+    *   并在客户端点击确认后，获得服务器授信的令牌，进行随后的信息交互过程。
+    *   在超时、网络断开、其他设备上登录后，此前获得的令牌或丢失、或失效，有效完成了安全防护。
+    * */
+
+    //1.首先请求后台返回一个unid（随机数）做标识
+    var randomNum;
+    $.ajax({
+        url: url,
+        type: 'get',
+        success: function (unid) {
+            randomNum = unid;
+        }
+    });
+    //2.生成二维码，将unid设为二维码的text
+    $('#qrCode').qrcode({
+        text: randomNum
+    });
+
+    //3.利用ajax轮询,看用户是否扫描并确认登录，若用户没扫描，请求结果为空
+    var timer1 = setInterval(checkIsScan, 1000);
+    var userName;
+    function cheakIsScan() {
+        $.ajax({
+            type: 'post',
+            url: url,
+            data: {
+                unid: randomNum
+            },
+            success: function (username) {
+                if (username) {
+                    clearInterval(timer1);
+                    userName = username;
+                    //请求成功则关闭二维码，防止再次去请求
+                    $('qrCode').html(username + '已扫描，请确认登录！');
+                    //4.确认登录成功则跳转页面
+                    //window.location.href = '';  不安全
+                    //模拟表单
+                    var temp = document.createElement("form");//创建表单
+                    temp.action = "xxxx.html";
+                    temp.method = "post";
+                    temp.style.display = "none";//不显示
+                    var opt = document.createElement("textarea");//创建一组键值对
+                    opt.name = "name";
+                    opt.value = username;
+                    temp.appendChild(opt);
+                    document.body.appendChild(temp);
+                    temp.submit();//提交
+                }
+            }
+        });
+    }
+</script>
+</html>
